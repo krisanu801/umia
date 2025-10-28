@@ -24,76 +24,76 @@ class CausalStoryDataset(Dataset):
         self.samples = self._generate_samples()
     
     def _generate_samples(self) -> List[Dict]:
-    samples = []
-    
-    for _ in range(self.num_samples):
-        # Generate a simple causal chain
-        num_entities = np.random.randint(3, self.max_entities + 1)
-        num_actions = np.random.randint(2, self.max_actions + 1)
+        samples = []
         
-        # State: value for each entity (start with non-zero values)
-        state = np.random.randint(5, 10, size=num_entities)  # Start with 5-10
-        
-        # Actions: (action_type, entity_idx, value)
-        actions = []
-        causal_graph = np.zeros((num_entities, num_entities))
-        
-        for _ in range(num_actions):
-            action_type = np.random.choice(['add', 'sub', 'transfer'])
+        for _ in range(self.num_samples):
+            # Generate a simple causal chain
+            num_entities = np.random.randint(3, self.max_entities + 1)
+            num_actions = np.random.randint(2, self.max_actions + 1)
             
-            if action_type in ['add', 'sub']:
-                entity = np.random.randint(0, num_entities)
-                value = np.random.randint(1, 5)
-                actions.append((action_type, entity, value))
+            # State: value for each entity (start with non-zero values)
+            state = np.random.randint(5, 10, size=num_entities)  # Start with 5-10
+            
+            # Actions: (action_type, entity_idx, value)
+            actions = []
+            causal_graph = np.zeros((num_entities, num_entities))
+            
+            for _ in range(num_actions):
+                action_type = np.random.choice(['add', 'sub', 'transfer'])
                 
-                # Update state
-                if action_type == 'add':
-                    state[entity] += value
-                else:
-                    state[entity] = max(0, state[entity] - value)
-            
-            elif action_type == 'transfer':
-                if num_entities < 2:
-                    continue
+                if action_type in ['add', 'sub']:
+                    entity = np.random.randint(0, num_entities)
+                    value = np.random.randint(1, 5)
+                    actions.append((action_type, entity, value))
                     
-                # Find entity with positive value
-                valid_sources = [i for i in range(num_entities) if state[i] > 0]
-                if len(valid_sources) == 0:
-                    continue  # Skip if no valid source
+                    # Update state
+                    if action_type == 'add':
+                        state[entity] += value
+                    else:
+                        state[entity] = max(0, state[entity] - value)
                 
-                from_idx = np.random.choice(valid_sources)
-                to_idx = np.random.randint(0, num_entities)
-                
-                # Make sure from and to are different
-                while to_idx == from_idx:
+                elif action_type == 'transfer':
+                    if num_entities < 2:
+                        continue
+                        
+                    # Find entity with positive value
+                    valid_sources = [i for i in range(num_entities) if state[i] > 0]
+                    if len(valid_sources) == 0:
+                        continue  # Skip if no valid source
+                    
+                    from_idx = np.random.choice(valid_sources)
                     to_idx = np.random.randint(0, num_entities)
-                
-                # Transfer amount (ensure upper bound > lower bound)
-                max_transfer = min(state[from_idx], 5)
-                if max_transfer < 1:
-                    continue  # Skip if can't transfer
-                
-                value = np.random.randint(1, max_transfer + 1)
-                actions.append((action_type, from_idx, to_idx, value))
-                
-                # Update state
-                state[from_idx] -= value
-                state[to_idx] += value
-                
-                # Causal edge
-                causal_graph[to_idx, from_idx] = 1
+                    
+                    # Make sure from and to are different
+                    while to_idx == from_idx:
+                        to_idx = np.random.randint(0, num_entities)
+                    
+                    # Transfer amount (ensure upper bound > lower bound)
+                    max_transfer = min(state[from_idx], 5)
+                    if max_transfer < 1:
+                        continue  # Skip if can't transfer
+                    
+                    value = np.random.randint(1, max_transfer + 1)
+                    actions.append((action_type, from_idx, to_idx, value))
+                    
+                    # Update state
+                    state[from_idx] -= value
+                    state[to_idx] += value
+                    
+                    # Causal edge
+                    causal_graph[to_idx, from_idx] = 1
+            
+            # Encode as sequence
+            sequence = self._encode_story(num_entities, actions)
+            
+            samples.append({
+                'sequence': sequence,
+                'final_state': state.copy(),
+                'causal_graph': causal_graph,
+                'num_entities': num_entities
+            })
         
-        # Encode as sequence
-        sequence = self._encode_story(num_entities, actions)
-        
-        samples.append({
-            'sequence': sequence,
-            'final_state': state.copy(),
-            'causal_graph': causal_graph,
-            'num_entities': num_entities
-        })
-    
-    return samples
+        return samples
 
     
     def _encode_story(self, num_entities: int, actions: List) -> np.ndarray:
