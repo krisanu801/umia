@@ -24,10 +24,14 @@ class DynamicsMechanism(nn.Module):
     def forward(
         self,
         slots: torch.Tensor,
-        adjacency: torch.Tensor,
+        adjacency: torch.Tensor = None,
         working_mem: Optional[torch.Tensor] = None,
-        **kwargs
+        memory_readout: Optional[torch.Tensor] = None,
+        **kwargs  # ADD THIS LINE
     ) -> torch.Tensor:
+        if adjacency is None:
+            adjacency = torch.ones(slots.size(0), slots.size(1), slots.size(1), device=slots.device)
+        
         B, N, D = slots.shape
         
         # Message passing
@@ -47,6 +51,7 @@ class DynamicsMechanism(nn.Module):
         delta = self.node_net(node_input)
         
         return slots + delta
+
 
 
 class ReasoningMechanism(nn.Module):
