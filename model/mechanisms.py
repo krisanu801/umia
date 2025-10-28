@@ -25,7 +25,8 @@ class DynamicsMechanism(nn.Module):
         self,
         slots: torch.Tensor,
         adjacency: torch.Tensor,
-        working_mem: Optional[torch.Tensor] = None
+        working_mem: Optional[torch.Tensor] = None,
+        **kwargs
     ) -> torch.Tensor:
         B, N, D = slots.shape
         
